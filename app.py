@@ -16,7 +16,7 @@ PASSWORD_HASH = hashlib.sha256("1234".encode()).hexdigest()
 WEATHER_API_KEY = "089cb559edf9127ca22ca63afa575f8c"
 
 # 🤖 OPENAI API (SET IN ENV VARIABLE)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("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"))
 
 st.set_page_config(page_title=APP_NAME, layout="wide")
 
