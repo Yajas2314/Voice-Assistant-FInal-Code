@@ -16,11 +16,13 @@ PASSWORD_HASH = hashlib.sha256("1234".encode()).hexdigest()
 WEATHER_API_KEY = "089cb559edf9127ca22ca63afa575f8c"
 
 # 🤖 OPENAI API (SET IN ENV VARIABLE)
+from openai import OpenAI
 client = OpenAI(
-    api_key="sk-...Yw4A"
+    api_key="YOUR_API_KEY"
 )
 response = client.responses.create(
-    model="gpt-5.5"
+    model="gpt-4.1-mini",
+    input="Hello!"
 )
 
 print(response.output_text)
