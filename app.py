@@ -1,8 +1,3 @@
-# Zephyr 3.0 — Advanced AI Assistant (Streamlit)
-
-## app.py
-
-```python
 import streamlit as st
 from datetime import datetime
 import pytz
@@ -18,10 +13,10 @@ import speech_recognition as sr
 from streamlit_mic_recorder import mic_recorder
 
 # =========================================================
-# 🤖 ZEPHYR 3.0
+# 🤖 ZEPHYR 2.0
 # =========================================================
 
-APP_NAME = "ZEPHYR 3.0"
+APP_NAME = "ZEPHYR 2.0"
 
 # =========================================================
 # 🔐 PASSWORD
@@ -35,7 +30,7 @@ PASSWORD_HASH = hashlib.sha256(
 # 🌦 WEATHER API
 # =========================================================
 
-WEATHER_API_KEY = "YOUR_OPENWEATHER_API_KEY"
+WEATHER_API_KEY = "089cb559edf9127ca22ca63afa575f8c"
 
 # =========================================================
 # 🤖 OPENAI
