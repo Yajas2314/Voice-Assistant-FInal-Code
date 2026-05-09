@@ -1,19 +1,30 @@
+# Zephyr 3.0 — Advanced AI Assistant (Streamlit)
+
+## app.py
+
+```python
 import streamlit as st
 from datetime import datetime
-import hashlib
-import os
-import requests
 import pytz
+import hashlib
+import requests
+import os
+import uuid
+import tempfile
+
 from openai import OpenAI
+from gtts import gTTS
+import speech_recognition as sr
+from streamlit_mic_recorder import mic_recorder
 
 # =========================================================
-# 🤖 ZEPHYR 2.0 - ADVANCED AI ASSISTANT
+# 🤖 ZEPHYR 3.0
 # =========================================================
 
-APP_NAME = "ZEPHYR 2.0"
+APP_NAME = "ZEPHYR 3.0"
 
 # =========================================================
-# 🔐 SECURITY
+# 🔐 PASSWORD
 # =========================================================
 
 PASSWORD_HASH = hashlib.sha256(
@@ -24,10 +35,10 @@ PASSWORD_HASH = hashlib.sha256(
 # 🌦 WEATHER API
 # =========================================================
 
-WEATHER_API_KEY = "089cb559edf9127ca22ca63afa575f8c"
+WEATHER_API_KEY = "YOUR_OPENWEATHER_API_KEY"
 
 # =========================================================
-# 🤖 OPENAI CLIENT
+# 🤖 OPENAI
 # =========================================================
 
 client = OpenAI(
@@ -35,7 +46,7 @@ client = OpenAI(
 )
 
 # =========================================================
-# 🎨 PAGE SETTINGS
+# 🎨 PAGE
 # =========================================================
 
 st.set_page_config(
@@ -45,83 +56,22 @@ st.set_page_config(
 )
 
 # =========================================================
-# 🧠 SESSION STATE
+# 🧠 SESSION
 # =========================================================
 
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 if "logs" not in st.session_state:
     st.session_state.logs = []
 
-if "login_attempts" not in st.session_state:
-    st.session_state.login_attempts = 0
-
 # =========================================================
-# 🔐 AUTHENTICATION
+# 🇮🇳 INDIA TIME
 # =========================================================
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def authenticate():
-
-    st.subheader("🔐 Secure Login")
-
-    if st.session_state.login_attempts >= 3:
-        st.error("Too many failed attempts.")
-        st.stop()
-
-    password = st.text_input(
-        "Enter Password",
-        type="password"
-    )
-
-    if st.button("Login"):
-
-        if hash_password(password) == PASSWORD_HASH:
-
-            st.session_state.auth = True
-
-            st.success("✅ Access Granted")
-
-        else:
-
-            st.session_state.login_attempts += 1
-
-            st.error(
-                f"❌ Wrong Password "
-                f"({st.session_state.login_attempts}/3)"
-            )
-
-    return st.session_state.auth
-
-# =========================================================
-# 📜 LOGGING
-# =========================================================
-
-def log_command(command):
-
-    india_timezone = pytz.timezone(
-        "Asia/Kolkata"
-    )
-
-    current_time = datetime.now(
-        india_timezone
-    ).strftime("%I:%M:%S %p")
-
-    entry = f"[{current_time}] {command}"
-
-    st.session_state.logs.append(entry)
-
-    os.makedirs("logs", exist_ok=True)
-
-    with open("logs/history.txt", "a") as file:
-        file.write(entry + "\n")
-
-# =========================================================
-# 🕒 INDIA TIME
-# =========================================================
 
 def tell_time():
 
@@ -138,8 +88,49 @@ def tell_time():
     )
 
 # =========================================================
+# 🔐 AUTH
+# =========================================================
+
+
+def authenticate():
+
+    st.subheader("🔐 Login")
+
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
+
+    if st.button("Login"):
+
+        if hashlib.sha256(
+            password.encode()
+        ).hexdigest() == PASSWORD_HASH:
+
+            st.session_state.auth = True
+
+            st.success("Access Granted")
+
+        else:
+            st.error("Wrong Password")
+
+# =========================================================
+# 📜 LOGGING
+# =========================================================
+
+
+def log_command(command):
+
+    current_time = tell_time()
+
+    entry = f"[{current_time}] {command}"
+
+    st.session_state.logs.append(entry)
+
+# =========================================================
 # 🌦 WEATHER
 # =========================================================
+
 
 def get_weather(city):
 
@@ -157,156 +148,154 @@ def get_weather(city):
         data = response.json()
 
         if data["cod"] != 200:
-            return "❌ City not found."
+            return "City not found"
 
         temp = data["main"]["temp"]
 
-        feels = data["main"]["feels_like"]
+        desc = data["weather"][0]["description"]
 
         humidity = data["main"]["humidity"]
 
-        desc = data["weather"][0]["description"]
-
-        country = data["sys"]["country"]
-
-        wind = data["wind"]["speed"]
-
         return (
-            f"📍 {city}, {country}\n\n"
+            f"📍 {city}\n\n"
             f"🌡 Temperature: {temp}°C\n"
-            f"🤗 Feels Like: {feels}°C\n"
-            f"💧 Humidity: {humidity}%\n"
-            f"🌬 Wind Speed: {wind} m/s\n"
-            f"☁ Condition: {desc}"
+            f"☁ Condition: {desc}\n"
+            f"💧 Humidity: {humidity}%"
         )
 
     except Exception as e:
-        return f"⚠ Weather Error: {str(e)}"
+        return f"Weather Error: {str(e)}"
+
+# =========================================================
+# 🔊 SPEAK
+# =========================================================
+
+
+def speak(text):
+
+    tts = gTTS(text=text, lang="en")
+
+    filename = f"voice_{uuid.uuid4()}.mp3"
+
+    tts.save(filename)
+
+    audio_file = open(filename, "rb")
+
+    audio_bytes = audio_file.read()
+
+    st.audio(audio_bytes, format="audio/mp3")
 
 # =========================================================
 # 🌐 SEARCH LINKS
 # =========================================================
 
+
 def get_search_links(query):
 
-    clean_query = query.strip().replace(
-        " ",
-        "+"
-    )
+    query = query.replace(" ", "+")
 
     return {
 
         "google":
-            f"https://www.google.com/search?q={clean_query}",
+        f"https://www.google.com/search?q={query}",
 
         "youtube":
-            f"https://www.youtube.com/results?"
-            f"search_query={clean_query}",
+        f"https://www.youtube.com/results?search_query={query}",
 
         "websites":
-            f"https://www.google.com/search?q="
-            f"{clean_query}+tutorial+guide",
+        f"https://www.google.com/search?q={query}+tutorial",
 
         "recipe":
-            f"https://www.google.com/search?q="
-            f"{clean_query}+recipe"
+        f"https://www.google.com/search?q={query}+recipe"
     }
 
 # =========================================================
 # 🤖 AI ENGINE
 # =========================================================
 
+
 def ask_ai(prompt):
 
     try:
 
-        if prompt.strip() == "":
-            return (
-                "I can't understand what you typed. "
-                "Please try again."
-            )
+        st.session_state.chat_history.append(
+            {
+                "role": "user",
+                "content": prompt
+            }
+        )
 
-        response = client.responses.create(
+        messages = [
+            {
+                "role": "system",
+                "content": """
+You are Zephyr 3.0.
+
+You are a futuristic AI assistant.
+
+Your tasks:
+- answer every question properly
+- help students
+- solve coding doubts
+- explain maths and science
+- explain concepts clearly
+- behave naturally
+- be friendly and intelligent
+"""
+            }
+        ]
+
+        messages.extend(
+            st.session_state.chat_history[-10:]
+        )
+
+        response = client.chat.completions.create(
 
             model="gpt-4.1-mini",
 
-            input=f"""
-You are Zephyr 2.0.
+            messages=messages,
 
-You are:
-- intelligent
-- reliable
-- modern
-- educational
-- safe
-- friendly
+            temperature=0.7,
 
-Your tasks:
-- answer every query properly
-- help students
-- help in coding
-- help in science
-- help in mathematics
-- help in general knowledge
-- give proper steps
-- explain clearly
-
-Rules:
-- If query is unclear say:
-  "I can't understand what you typed.
-   Please try again."
-
-- Never give blank answers
-- Keep answers clear and useful
-- Be polite and natural
-
-User Query:
-{prompt}
-"""
+            max_tokens=600
         )
 
-        ai_reply = response.output_text.strip()
+        ai_reply = (
+            response
+            .choices[0]
+            .message.content
+        )
 
-        if ai_reply == "":
-            return (
-                "I can't understand what you typed."
-            )
+        st.session_state.chat_history.append(
+            {
+                "role": "assistant",
+                "content": ai_reply
+            }
+        )
 
         return ai_reply
 
-    except Exception:
+    except Exception as e:
 
-        return (
-            "⚠ AI Service unavailable right now."
-        )
+        return f"AI Error: {str(e)}"
 
 # =========================================================
 # ⚙ COMMAND ENGINE
 # =========================================================
 
-def handle_command(command):
 
-    command = command.strip()
+def handle_command(command):
 
     lower_command = command.lower()
 
     log_command(command)
 
-    # =====================================================
-    # 🕒 TIME
-    # =====================================================
-
+    # TIME
     if "time" in lower_command:
 
-        return (
-            f"🕒 Current Indian Time: "
-            f"{tell_time()}"
-        )
+        return f"🕒 Indian Time: {tell_time()}"
 
-    # =====================================================
-    # 🌦 WEATHER
-    # =====================================================
-
+    # WEATHER
     elif lower_command.startswith("weather"):
 
         city = lower_command.replace(
@@ -315,143 +304,41 @@ def handle_command(command):
         ).strip()
 
         if city == "":
-
-            return (
-                "Please type a city name.\n\n"
-                "Example:\n"
-                "weather Mumbai"
-            )
+            return "Example: weather Mumbai"
 
         return get_weather(city)
 
-    # =====================================================
-    # 🌐 OPEN GOOGLE
-    # =====================================================
-
+    # OPEN GOOGLE
     elif "open google" in lower_command:
 
         st.markdown(
-            """
-### 🌐 Open Google
-
-[Click Here To Open Google](https://www.google.com)
-""",
-            unsafe_allow_html=True
+            "[🌐 Open Google](https://google.com)"
         )
 
-        return "🌐 Google Ready"
+        return "Google Ready"
 
-    # =====================================================
-    # 🎵 OPEN SPOTIFY
-    # =====================================================
-
+    # OPEN SPOTIFY
     elif "open spotify" in lower_command:
 
         st.markdown(
-            """
-### 🎵 Open Spotify
-
-[Click Here To Open Spotify](https://open.spotify.com)
-""",
-            unsafe_allow_html=True
+            "[🎵 Open Spotify](https://open.spotify.com)"
         )
 
-        return "🎵 Spotify Ready"
+        return "Spotify Ready"
 
-    # =====================================================
-    # ▶ OPEN YOUTUBE
-    # =====================================================
-
+    # OPEN YOUTUBE
     elif "open youtube" in lower_command:
 
         st.markdown(
-            """
-### ▶ Open YouTube
-
-[Click Here To Open YouTube](https://www.youtube.com)
-""",
-            unsafe_allow_html=True
+            "[▶ Open YouTube](https://youtube.com)"
         )
 
-        return "▶ YouTube Ready"
+        return "YouTube Ready"
 
-    # =====================================================
-    # 🤖 OPEN CHATGPT
-    # =====================================================
-
-    elif "open chatgpt" in lower_command:
-
-        st.markdown(
-            """
-### 🤖 Open ChatGPT
-
-[Click Here To Open ChatGPT](https://chatgpt.com)
-""",
-            unsafe_allow_html=True
-        )
-
-        return "🤖 ChatGPT Ready"
-
-    # =====================================================
-    # 🔎 SEARCH
-    # =====================================================
-
-    elif lower_command.startswith("search"):
-
-        query = lower_command.replace(
-            "search",
-            ""
-        ).strip()
-
-        if query == "":
-            return "Please type something to search."
-
-        links = get_search_links(query)
-
-        st.markdown(
-            f"""
-### 🔎 Recommended Results
-
-- [🌐 Google Search]({links['google']})
-
-- [🎥 YouTube Videos]({links['youtube']})
-
-- [📘 Tutorials & Websites]({links['websites']})
-
-- [🍳 Recipes & Articles]({links['recipe']})
-""",
-            unsafe_allow_html=True
-        )
-
-        return f"Searching for: {query}"
-
-    # =====================================================
-    # 🔒 LOCK
-    # =====================================================
-
-    elif "lock" in lower_command:
-
-        st.session_state.auth = False
-
-        return "🔒 System Locked"
-
-    # =====================================================
-    # 🧹 CLEAR LOGS
-    # =====================================================
-
-    elif "clear logs" in lower_command:
-
-        st.session_state.logs.clear()
-
-        return "🧹 Logs Cleared"
-
-    # =====================================================
-    # 🤖 AI DEFAULT
-    # =====================================================
-
+    # AI MODE
     else:
 
-        ai_response = ask_ai(command)
+        response = ask_ai(command)
 
         links = get_search_links(command)
 
@@ -460,53 +347,32 @@ def handle_command(command):
 ### 🔎 Recommended Links
 
 - [🌐 Google Search]({links['google']})
-
 - [🎥 YouTube Videos]({links['youtube']})
-
-- [📘 Tutorials & Websites]({links['websites']})
-
+- [📘 Tutorials]({links['websites']})
 - [🍳 Articles & Recipes]({links['recipe']})
-""",
-            unsafe_allow_html=True
+"""
         )
 
-        return "🤖 " + ai_response
+        return response
 
 # =========================================================
-# 🎨 UI DESIGN
+# 🎨 UI
 # =========================================================
 
-st.markdown("""
+st.markdown(
+    """
 <style>
-
-body {
-    background-color: #0b0f1a;
-}
-
 .title {
-    text-align: center;
-    font-size: 55px;
-    font-weight: bold;
-    color: #00f0ff;
-    text-shadow: 0 0 25px #00f0ff;
-    margin-bottom: 25px;
+    text-align:center;
+    font-size:55px;
+    color:#00f0ff;
+    font-weight:bold;
+    text-shadow:0 0 20px #00f0ff;
 }
-
-.panel {
-    border: 1px solid #00f0ff;
-    border-radius: 18px;
-    padding: 20px;
-    background-color: rgba(0,0,0,0.35);
-    box-shadow: 0 0 15px #00f0ff;
-    margin-bottom: 20px;
-}
-
 </style>
-""", unsafe_allow_html=True)
-
-# =========================================================
-# 🤖 TITLE
-# =========================================================
+""",
+    unsafe_allow_html=True
+)
 
 st.markdown(
     f'<div class="title">🤖 {APP_NAME}</div>',
@@ -514,131 +380,118 @@ st.markdown(
 )
 
 # =========================================================
-# 🔐 LOGIN
+# LOGIN
 # =========================================================
 
 if not st.session_state.auth:
 
-    if not authenticate():
-        st.stop()
+    authenticate()
+
+    st.stop()
 
 # =========================================================
-# 📊 DASHBOARD
+# SIDEBAR
 # =========================================================
 
-col1, col2 = st.columns(2)
+with st.sidebar:
+
+    st.header("⚡ Zephyr Controls")
+
+    st.write("🕒", tell_time())
+
+    st.write("📜 Logs:", len(st.session_state.logs))
+
+    if st.button("Clear Chat"):
+
+        st.session_state.chat_history = []
 
 # =========================================================
-# 💬 LEFT PANEL
+# CHAT HISTORY
 # =========================================================
 
-with col1:
+for message in st.session_state.chat_history:
 
-    st.markdown(
-        '<div class="panel">',
-        unsafe_allow_html=True
-    )
+    with st.chat_message(message["role"]):
 
-    st.subheader("💬 Command Center")
+        st.markdown(message["content"])
 
-    user_input = st.text_input(
-        "Enter command",
-        placeholder="Ask Zephyr anything..."
-    )
+# =========================================================
+# 🎤 VOICE INPUT
+# =========================================================
 
-    if st.button("Execute"):
+st.subheader("🎤 Voice Assistant")
 
-        if user_input.strip() != "":
+voice = mic_recorder(
+    start_prompt="Start Recording",
+    stop_prompt="Stop Recording",
+    key="voice_recorder"
+)
 
-            result = handle_command(user_input)
+if voice:
 
-            st.success(result)
+    recognizer = sr.Recognizer()
 
-        else:
+    with tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".wav"
+    ) as temp_audio:
 
-            st.warning(
-                "I can't understand what you typed."
+        temp_audio.write(voice["bytes"])
+
+        temp_audio_path = temp_audio.name
+
+    with sr.AudioFile(temp_audio_path) as source:
+
+        audio_data = recognizer.record(source)
+
+        try:
+
+            text = recognizer.recognize_google(
+                audio_data
             )
 
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+            st.success(f"You said: {text}")
+
+            reply = handle_command(text)
+
+            with st.chat_message("assistant"):
+
+                st.markdown(reply)
+
+            speak(reply)
+
+        except:
+            st.error("Could not understand audio")
 
 # =========================================================
-# 📈 RIGHT PANEL
+# 💬 CHAT INPUT
 # =========================================================
 
-with col2:
+user_input = st.chat_input(
+    "Ask Zephyr anything..."
+)
 
-    st.markdown(
-        '<div class="panel">',
-        unsafe_allow_html=True
-    )
+if user_input:
 
-    st.subheader("📊 System Information")
+    with st.chat_message("user"):
 
-    st.write(
-        "🕒 Indian Time:",
-        tell_time()
-    )
+        st.markdown(user_input)
 
-    st.write(
-        "📜 Total Logs:",
-        len(st.session_state.logs)
-    )
+    reply = handle_command(user_input)
 
-    st.write(
-        "🌦 Weather Example:",
-        "weather Tokyo"
-    )
+    with st.chat_message("assistant"):
 
-    st.write(
-        "🔎 Search Example:",
-        "search best gaming laptop"
-    )
+        st.markdown(reply)
 
-    st.write(
-        "🌐 Open Google:",
-        "open google"
-    )
-
-    st.write(
-        "🎵 Open Spotify:",
-        "open spotify"
-    )
-
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+    speak(reply)
 
 # =========================================================
-# 📜 LOGS
-# =========================================================
-
-st.subheader("📜 Activity Logs")
-
-if len(st.session_state.logs) == 0:
-
-    st.info("No logs available.")
-
-else:
-
-    for log in reversed(
-        st.session_state.logs[-10:]
-    ):
-        st.text(log)
-
-# =========================================================
-# 🦶 FOOTER
+# FOOTER
 # =========================================================
 
 st.markdown("---")
 
 st.write(
-    "🔐 Secure | 🌐 Google Connected | "
-    "🎥 YouTube Connected | 🎵 Spotify Connected | "
-    "🤖 OpenAI Powered | 🇮🇳 Indian Time Enabled "
-    "| Zephyr 2.0"
+    "🤖 OpenAI Powered | 🎤 Voice Enabled | "
+    "🌐 Smart Search | 🇮🇳 Indian Time | Zephyr 3.0"
 )
