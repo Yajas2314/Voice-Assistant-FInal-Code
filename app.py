@@ -3,30 +3,51 @@ from datetime import datetime
 import hashlib
 import os
 import requests
+import pytz
 from openai import OpenAI
 
-# ---------------- CONFIG ---------------- #
+# =========================================================
+# 🤖 ZEPHYR 2.0 - ADVANCED AI ASSISTANT
+# =========================================================
+
 APP_NAME = "ZEPHYR 2.0"
 
-# 🔐 SECURITY PASSWORD
-PASSWORD_HASH = hashlib.sha256("1234".encode()).hexdigest()
+# =========================================================
+# 🔐 SECURITY
+# =========================================================
 
+PASSWORD_HASH = hashlib.sha256(
+    "1234".encode()
+).hexdigest()
+
+# =========================================================
 # 🌦 WEATHER API
+# =========================================================
+
 WEATHER_API_KEY = "089cb559edf9127ca22ca63afa575f8c"
 
-# 🤖 OPENAI API
+# =========================================================
+# 🤖 OPENAI CLIENT
+# =========================================================
+
 client = OpenAI(
     api_key=st.secrets["OPENAI_API_KEY"]
 )
 
-# ---------------- PAGE CONFIG ---------------- #
+# =========================================================
+# 🎨 PAGE SETTINGS
+# =========================================================
+
 st.set_page_config(
     page_title=APP_NAME,
     page_icon="🤖",
     layout="wide"
 )
 
-# ---------------- SESSION STATE ---------------- #
+# =========================================================
+# 🧠 SESSION STATE
+# =========================================================
+
 if "auth" not in st.session_state:
     st.session_state.auth = False
 
@@ -36,7 +57,10 @@ if "logs" not in st.session_state:
 if "login_attempts" not in st.session_state:
     st.session_state.login_attempts = 0
 
-# ---------------- SECURITY ---------------- #
+# =========================================================
+# 🔐 AUTHENTICATION
+# =========================================================
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -45,7 +69,7 @@ def authenticate():
     st.subheader("🔐 Secure Login")
 
     if st.session_state.login_attempts >= 3:
-        st.error("Too many failed attempts. Access blocked.")
+        st.error("Too many failed attempts.")
         st.stop()
 
     password = st.text_input(
@@ -58,6 +82,7 @@ def authenticate():
         if hash_password(password) == PASSWORD_HASH:
 
             st.session_state.auth = True
+
             st.success("✅ Access Granted")
 
         else:
@@ -65,16 +90,23 @@ def authenticate():
             st.session_state.login_attempts += 1
 
             st.error(
-                f"❌ Access Denied "
+                f"❌ Wrong Password "
                 f"({st.session_state.login_attempts}/3)"
             )
 
     return st.session_state.auth
 
-# ---------------- LOGGING ---------------- #
+# =========================================================
+# 📜 LOGGING
+# =========================================================
+
 def log_command(command):
 
-    current_time = datetime.now().strftime("%H:%M:%S")
+    india_timezone = pytz.timezone("Asia/Kolkata")
+
+    current_time = datetime.now(
+        india_timezone
+    ).strftime("%I:%M:%S %p")
 
     entry = f"[{current_time}] {command}"
 
@@ -85,13 +117,28 @@ def log_command(command):
     with open("logs/history.txt", "a") as file:
         file.write(entry + "\n")
 
-# ---------------- FEATURES ---------------- #
+# =========================================================
+# 🕒 INDIA TIME
+# =========================================================
 
-# 🕒 TIME
 def tell_time():
-    return datetime.now().strftime("%H:%M:%S")
 
+    india_timezone = pytz.timezone(
+        "Asia/Kolkata"
+    )
+
+    india_time = datetime.now(
+        india_timezone
+    )
+
+    return india_time.strftime(
+        "%I:%M:%S %p"
+    )
+
+# =========================================================
 # 🌦 WEATHER
+# =========================================================
+
 def get_weather(city):
 
     try:
@@ -111,97 +158,162 @@ def get_weather(city):
             return "❌ City not found."
 
         temp = data["main"]["temp"]
+
         feels = data["main"]["feels_like"]
+
         humidity = data["main"]["humidity"]
 
         desc = data["weather"][0]["description"]
 
         country = data["sys"]["country"]
 
+        wind = data["wind"]["speed"]
+
         return (
             f"📍 {city}, {country}\n\n"
             f"🌡 Temperature: {temp}°C\n"
             f"🤗 Feels Like: {feels}°C\n"
             f"💧 Humidity: {humidity}%\n"
+            f"🌬 Wind Speed: {wind} m/s\n"
             f"☁ Condition: {desc}"
         )
 
     except Exception as e:
         return f"⚠ Weather Error: {str(e)}"
 
-# 🌐 GOOGLE SEARCH LINK
-def get_google_link(query):
-    return f"https://www.google.com/search?q={query}"
+# =========================================================
+# 🌐 SEARCH LINKS
+# =========================================================
 
-# 🤖 AI FUNCTION
+def get_search_links(query):
+
+    clean_query = query.strip().replace(
+        " ",
+        "+"
+    )
+
+    return {
+
+        "google":
+            f"https://www.google.com/search?q={clean_query}",
+
+        "youtube":
+            f"https://www.youtube.com/results?"
+            f"search_query={clean_query}",
+
+        "websites":
+            f"https://www.google.com/search?q="
+            f"{clean_query}+tutorial+guide",
+
+        "recipe":
+            f"https://www.google.com/search?q="
+            f"{clean_query}+recipe"
+    }
+
+# =========================================================
+# 🤖 AI ENGINE
+# =========================================================
+
 def ask_ai(prompt):
 
     try:
 
-        # Empty Input
         if prompt.strip() == "":
-            return "I can't understand what you typed. Please try again."
+            return (
+                "I can't understand what you typed. "
+                "Please try again."
+            )
 
         response = client.responses.create(
+
             model="gpt-4.1-mini",
 
             input=f"""
-            You are Zephyr 2.0.
+You are Zephyr 2.0.
 
-            You are:
-            - intelligent
-            - reliable
-            - friendly
-            - educational
-            - safe
+You are:
+- intelligent
+- reliable
+- modern
+- educational
+- safe
+- friendly
 
-            Rules:
-            - Answer every query clearly.
-            - If query is confusing say:
-              'I can't understand what you typed.
-               Please try again.'
-            - Keep responses useful and simple.
-            - Be polite and user friendly.
+Your tasks:
+- answer every query properly
+- help students
+- help in coding
+- help in science
+- help in mathematics
+- help in general knowledge
+- give proper steps
+- explain clearly
 
-            User Query:
-            {prompt}
-            """
+Rules:
+- If query is unclear say:
+  "I can't understand what you typed.
+   Please try again."
+
+- Never give blank answers
+- Keep answers clear and useful
+- Be polite and natural
+
+User Query:
+{prompt}
+"""
         )
 
         ai_reply = response.output_text.strip()
 
         if ai_reply == "":
-            return "I can't understand what you typed. Please try again."
+            return (
+                "I can't understand what you typed."
+            )
 
         return ai_reply
 
     except Exception:
 
-        google_link = get_google_link(prompt)
-
         return (
-            "⚠ AI service unavailable.\n\n"
-            f"🔎 Backup Google Search:\n{google_link}"
+            "⚠ AI Service unavailable right now."
         )
 
-# ---------------- COMMAND ENGINE ---------------- #
+# =========================================================
+# ⚙ COMMAND ENGINE
+# =========================================================
+
 def handle_command(command):
 
-    command = command.lower()
+    command = command.strip()
+
+    lower_command = command.lower()
 
     log_command(command)
 
+    # =====================================================
     # 🕒 TIME
-    if "time" in command:
+    # =====================================================
 
-        return f"🕒 Current Time: {tell_time()}"
+    if "time" in lower_command:
 
+        return (
+            f"🕒 Current Indian Time: "
+            f"{tell_time()}"
+        )
+
+    # =====================================================
     # 🌦 WEATHER
-    elif "weather" in command:
+    # =====================================================
 
-        city = command.replace("weather", "").strip()
+    elif lower_command.startswith("weather"):
+
+        city = lower_command.replace(
+            "weather",
+            ""
+        ).strip()
 
         if city == "":
+
             return (
                 "Please type a city name.\n\n"
                 "Example:\n"
@@ -210,52 +322,90 @@ def handle_command(command):
 
         return get_weather(city)
 
+    # =====================================================
     # 🔎 SEARCH
-    elif command.startswith("search"):
+    # =====================================================
 
-        query = command.replace("search", "").strip()
+    elif lower_command.startswith("search"):
+
+        query = lower_command.replace(
+            "search",
+            ""
+        ).strip()
 
         if query == "":
             return "Please type something to search."
 
-        google_url = get_google_link(query)
+        links = get_search_links(query)
 
         st.markdown(
-            f"[🔎 Click here to search Google]({google_url})",
+            f"""
+### 🔎 Recommended Results
+
+- [🌐 Google Search]({links['google']})
+
+- [🎥 YouTube Videos]({links['youtube']})
+
+- [📘 Tutorials & Websites]({links['websites']})
+
+- [🍳 Recipes & Articles]({links['recipe']})
+""",
             unsafe_allow_html=True
         )
 
-        return f"Searching Google for: {query}"
+        return f"Searching for: {query}"
 
+    # =====================================================
     # 🔒 LOCK
-    elif "lock" in command:
+    # =====================================================
+
+    elif "lock" in lower_command:
 
         st.session_state.auth = False
 
         return "🔒 System Locked"
 
+    # =====================================================
     # 🧹 CLEAR LOGS
-    elif "clear logs" in command:
+    # =====================================================
+
+    elif "clear logs" in lower_command:
 
         st.session_state.logs.clear()
 
         return "🧹 Logs Cleared"
 
+    # =====================================================
     # 🤖 AI DEFAULT
+    # =====================================================
+
     else:
 
         ai_response = ask_ai(command)
 
-        google_url = get_google_link(command)
+        links = get_search_links(command)
 
         st.markdown(
-            f"[🔎 Search on Google]({google_url})",
+            f"""
+### 🔎 Recommended Links
+
+- [🌐 Google Search]({links['google']})
+
+- [🎥 YouTube Videos]({links['youtube']})
+
+- [📘 Tutorials & Websites]({links['websites']})
+
+- [🍳 Articles & Recipes]({links['recipe']})
+""",
             unsafe_allow_html=True
         )
 
         return "🤖 " + ai_response
 
-# ---------------- UI DESIGN ---------------- #
+# =========================================================
+# 🎨 UI DESIGN
+# =========================================================
+
 st.markdown("""
 <style>
 
@@ -265,16 +415,16 @@ body {
 
 .title {
     text-align: center;
-    font-size: 50px;
+    font-size: 55px;
     font-weight: bold;
     color: #00f0ff;
-    text-shadow: 0 0 20px #00f0ff;
-    margin-bottom: 20px;
+    text-shadow: 0 0 25px #00f0ff;
+    margin-bottom: 25px;
 }
 
 .panel {
     border: 1px solid #00f0ff;
-    border-radius: 15px;
+    border-radius: 18px;
     padding: 20px;
     background-color: rgba(0,0,0,0.35);
     box-shadow: 0 0 15px #00f0ff;
@@ -284,22 +434,34 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TITLE ---------------- #
+# =========================================================
+# 🤖 TITLE
+# =========================================================
+
 st.markdown(
     f'<div class="title">🤖 {APP_NAME}</div>',
     unsafe_allow_html=True
 )
 
-# ---------------- AUTH ---------------- #
+# =========================================================
+# 🔐 LOGIN
+# =========================================================
+
 if not st.session_state.auth:
 
     if not authenticate():
         st.stop()
 
-# ---------------- DASHBOARD ---------------- #
+# =========================================================
+# 📊 DASHBOARD
+# =========================================================
+
 col1, col2 = st.columns(2)
 
-# LEFT PANEL
+# =========================================================
+# 💬 LEFT PANEL
+# =========================================================
+
 with col1:
 
     st.markdown(
@@ -333,7 +495,10 @@ with col1:
         unsafe_allow_html=True
     )
 
-# RIGHT PANEL
+# =========================================================
+# 📈 RIGHT PANEL
+# =========================================================
+
 with col2:
 
     st.markdown(
@@ -343,13 +508,24 @@ with col2:
 
     st.subheader("📊 System Information")
 
-    st.write("🕒 Current Time:", tell_time())
-
-    st.write("📜 Total Logs:", len(st.session_state.logs))
+    st.write(
+        "🕒 Indian Time:",
+        tell_time()
+    )
 
     st.write(
-        "🌦 Example Weather Command:",
-        "weather Mumbai"
+        "📜 Total Logs:",
+        len(st.session_state.logs)
+    )
+
+    st.write(
+        "🌦 Weather Example:",
+        "weather Tokyo"
+    )
+
+    st.write(
+        "🔎 Search Example:",
+        "search best gaming laptop"
     )
 
     st.markdown(
@@ -357,7 +533,10 @@ with col2:
         unsafe_allow_html=True
     )
 
-# ---------------- LOGS ---------------- #
+# =========================================================
+# 📜 LOGS
+# =========================================================
+
 st.subheader("📜 Activity Logs")
 
 if len(st.session_state.logs) == 0:
@@ -366,13 +545,19 @@ if len(st.session_state.logs) == 0:
 
 else:
 
-    for log in reversed(st.session_state.logs[-10:]):
+    for log in reversed(
+        st.session_state.logs[-10:]
+    ):
         st.text(log)
 
-# ---------------- FOOTER ---------------- #
+# =========================================================
+# 🦶 FOOTER
+# =========================================================
+
 st.markdown("---")
 
 st.write(
-    "🔐 Secure | 🌐 Google Backup | "
-    "🤖 OpenAI Powered | Zephyr 2.0"
+    "🔐 Secure | 🌐 Google Connected | "
+    "🎥 YouTube Connected | 🤖 OpenAI Powered "
+    "| 🇮🇳 Indian Time Enabled | Zephyr 2.0"
 )
