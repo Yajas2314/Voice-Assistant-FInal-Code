@@ -424,22 +424,20 @@ voice = mic_recorder(
 
 if voice:
 
-    recognizer = sr.Recognizer()
+    try:
 
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".wav"
-    ) as temp_audio:
+        recognizer = sr.Recognizer()
 
-        temp_audio.write(voice["bytes"])
+        # Save audio correctly
+        temp_audio_path = "temp_audio.wav"
 
-        temp_audio_path = temp_audio.name
+        with open(temp_audio_path, "wb") as file:
+            file.write(voice["bytes"])
 
-    with sr.AudioFile(temp_audio_path) as source:
+        # Read audio safely
+        with sr.AudioFile(temp_audio_path) as source:
 
-        audio_data = recognizer.record(source)
-
-        try:
+            audio_data = recognizer.record(source)
 
             text = recognizer.recognize_google(
                 audio_data
@@ -447,16 +445,22 @@ if voice:
 
             st.success(f"You said: {text}")
 
+            # Handle command
             reply = handle_command(text)
 
+            # Display reply
             with st.chat_message("assistant"):
 
                 st.markdown(reply)
 
+            # Speak reply
             speak(reply)
 
-        except:
-            st.error("Could not understand audio")
+    except Exception as e:
+
+        st.error(
+            f"Voice Error: {str(e)}"
+        )
 
 # =========================================================
 # 💬 CHAT INPUT
