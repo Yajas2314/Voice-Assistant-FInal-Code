@@ -102,7 +102,9 @@ def authenticate():
 
 def log_command(command):
 
-    india_timezone = pytz.timezone("Asia/Kolkata")
+    india_timezone = pytz.timezone(
+        "Asia/Kolkata"
+    )
 
     current_time = datetime.now(
         india_timezone
@@ -323,6 +325,74 @@ def handle_command(command):
         return get_weather(city)
 
     # =====================================================
+    # 🌐 OPEN GOOGLE
+    # =====================================================
+
+    elif "open google" in lower_command:
+
+        st.markdown(
+            """
+### 🌐 Open Google
+
+[Click Here To Open Google](https://www.google.com)
+""",
+            unsafe_allow_html=True
+        )
+
+        return "🌐 Google Ready"
+
+    # =====================================================
+    # 🎵 OPEN SPOTIFY
+    # =====================================================
+
+    elif "open spotify" in lower_command:
+
+        st.markdown(
+            """
+### 🎵 Open Spotify
+
+[Click Here To Open Spotify](https://open.spotify.com)
+""",
+            unsafe_allow_html=True
+        )
+
+        return "🎵 Spotify Ready"
+
+    # =====================================================
+    # ▶ OPEN YOUTUBE
+    # =====================================================
+
+    elif "open youtube" in lower_command:
+
+        st.markdown(
+            """
+### ▶ Open YouTube
+
+[Click Here To Open YouTube](https://www.youtube.com)
+""",
+            unsafe_allow_html=True
+        )
+
+        return "▶ YouTube Ready"
+
+    # =====================================================
+    # 🤖 OPEN CHATGPT
+    # =====================================================
+
+    elif "open chatgpt" in lower_command:
+
+        st.markdown(
+            """
+### 🤖 Open ChatGPT
+
+[Click Here To Open ChatGPT](https://chatgpt.com)
+""",
+            unsafe_allow_html=True
+        )
+
+        return "🤖 ChatGPT Ready"
+
+    # =====================================================
     # 🔎 SEARCH
     # =====================================================
 
@@ -528,6 +598,16 @@ with col2:
         "search best gaming laptop"
     )
 
+    st.write(
+        "🌐 Open Google:",
+        "open google"
+    )
+
+    st.write(
+        "🎵 Open Spotify:",
+        "open spotify"
+    )
+
     st.markdown(
         '</div>',
         unsafe_allow_html=True
@@ -558,6 +638,7 @@ st.markdown("---")
 
 st.write(
     "🔐 Secure | 🌐 Google Connected | "
-    "🎥 YouTube Connected | 🤖 OpenAI Powered "
-    "| 🇮🇳 Indian Time Enabled | Zephyr 2.0"
+    "🎥 YouTube Connected | 🎵 Spotify Connected | "
+    "🤖 OpenAI Powered | 🇮🇳 Indian Time Enabled "
+    "| Zephyr 2.0"
 )
