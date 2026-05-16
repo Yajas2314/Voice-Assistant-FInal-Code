@@ -413,4 +413,10 @@ app.on('activate', () => {
 ```
 
 ---
+npm install electron express cors dotenv groq-sdk
+
+GROQ_API_KEY=your_key
+GROQ_API_KEY_2=your_second_key
+GEMINI_API_KEY=your_key
+OPENROUTER_API_KEY=your_key
 
