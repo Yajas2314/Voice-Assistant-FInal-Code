@@ -1,9 +1,0 @@
-streamlit
-openai>=1.0.0
-requests
-pytz
-gtts
-SpeechRecognition
-streamlit-mic-recorder
-pydub
-ffmpeg-python
