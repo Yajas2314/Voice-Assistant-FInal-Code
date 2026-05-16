@@ -209,17 +209,7 @@ ipcMain.handle('run-command', async (event, data) => {
     };
   }
 
-  // WEB SEARCH
-  if (data.action === 'web_search') {
-    const query = encodeURIComponent(data.query);
-
-    exec(`start https://www.google.com/search?q=${query}`);
-
-    return {
-      success: true
-    };
-  }
-
+ 
   // SYSTEM COMMANDS
   if (data.action === 'system') {
 
@@ -328,49 +318,7 @@ ipcMain.handle('groq-stt', async (event, buffer) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// GEMINI CHAT
-// ─────────────────────────────────────────────────────────────
 
-ipcMain.handle('gemini-chat', async (event, messages) => {
-
-  try {
-
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ contents })
-      }
-    );
-
-    const data = await response.json();
-
-    const reply = data.candidates[0].content.parts[0].text;
-
-    return {
-      success: true,
-      reply
-    };
-
-  } catch (err) {
-
-    return {
-      success: false,
-      error: err.message
-    };
-  }
-});
 
 // ─────────────────────────────────────────────────────────────
 // ELECTRON LIFECYCLE
