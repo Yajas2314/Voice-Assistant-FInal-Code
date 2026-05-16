@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   JARVIS HUD v3.0 — RENDERER, VISUALS, & PREMIUM INTELLIGENCE
+   ZEPHYR 1.0 — RENDERER, VISUALS, & PREMIUM INTELLIGENCE
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // ── UI ELEMENTS ──
